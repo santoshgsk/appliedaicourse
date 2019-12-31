@@ -1,0 +1,10 @@
+version: '2.1'
+
+services:
+  appliedaicourse:
+    image: appliedaicourse
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
