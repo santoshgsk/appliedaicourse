@@ -13,9 +13,10 @@ USER root
 RUN apt-get update && \
       apt-get -y install sudo
 
-# RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
 
-# RUN adduser jovyan sudo
+RUN adduser jovyan sudo
+RUN echo '\njovyan ALL=(ALL) NOPASSWD:ALL\n' >> /etc/sudoers
 
 # LABEL Name=appliedaicourse Version=0.0.1
 # EXPOSE 8080
@@ -23,12 +24,13 @@ RUN apt-get update && \
 WORKDIR /app
 ADD . /app
 
-RUN apt-get install -y curl gnupg2 && \
-        curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-        curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+RUN apt-get install -y curl gnupg2 
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+RUN curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
         apt-get update
 
-RUN ACCEPT_EULA=y apt-get install -y msodbcsql17
+USER jovyan
+RUN sudo ACCEPT_EULA=y apt-get install -y msodbcsql17
 
         # optional: for bcp and sqlcmd
 # RUN ACCEPT_EULA=Y apt-get install -y mssql-tools && \
@@ -40,8 +42,8 @@ RUN ACCEPT_EULA=y apt-get install -y msodbcsql17
 
 
 # Using pip:
-RUN conda install -y pyodbc
-RUN echo pwd
+RUN conda install -y --file requirements.txt
+RUN conda install pytorch torchvision cpuonly -c pytorch
 # CMD ["python3", "-m", "appliedaicourse"]
 
 # Using pipenv:
