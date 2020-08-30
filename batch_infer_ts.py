@@ -57,7 +57,7 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
 
     df = pd.DataFrame({"predictions": all_results})
     
-    dataframe1["predictions"] = df["predictions"].astype(str)
+#     dataframe1["predictions"] = df["predictions"].astype(str)
     
     # dataframe1["predictions"] = df["predictions"]
 
