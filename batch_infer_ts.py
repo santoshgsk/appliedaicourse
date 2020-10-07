@@ -59,7 +59,7 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
     
 #     dataframe1["predictions"] = df["predictions"].astype(str)
     
-    # dataframe1["predictions"] = df["predictions"]
+    dataframe1["predictions"] = df["predictions"]
 
     # If a zip file is connected to the third input port,
     # it is unzipped under "./Script Bundle". This directory is added
