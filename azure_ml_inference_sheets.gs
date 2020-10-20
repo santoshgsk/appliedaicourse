@@ -1,7 +1,5 @@
-var endpoint = 'http://53730935-2685-415a-99f7-9d2e148b2624.eastus.azurecontainer.io/score'
 
-
-function getPredictions(formData) {
+function getPredictions(endpoint, formData) {
     
   var options = {
     'method' : 'post',
@@ -21,7 +19,7 @@ function getPredictions(formData) {
   
 }
 
-function getData() {
+function getData(endpoint) {
   
   var sheet = SpreadsheetApp.getActiveSheet();  
   
@@ -47,7 +45,7 @@ function getData() {
    
     formDict = {"data": [formData]};
         
-    predictions.push(getPredictions(formDict));
+    predictions.push(getPredictions(endpoint, formDict));
     
   })
   
@@ -55,14 +53,28 @@ function getData() {
     
 }
 
+function showPopup() {
+  
+  var ui = SpreadsheetApp.getUi();
+  
+  var prompt = ui.prompt("Azure AutoML Endpoint", "Enter the endpoint url of the AutoML model", ui.ButtonSet.OK);
+  
+  var endpoint = prompt.getResponseText();
+  
+  Logger.log(endpoint.length);
+  
+  if (endpoint.length > 0)
+  {
+    getData(endpoint)
+  }
+}
 
 
-
-
-
-
-
-
-
-
-
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Azure AutoML')
+      .addItem('Get Predictions', 'showPopup')
+      .addToUi();
+  
+  
+}
