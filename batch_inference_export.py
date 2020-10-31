@@ -7,7 +7,7 @@ import json
 import re
 import pandas as pd
 
-API_ENDPOINT = '<YOUR ENDPOINT>'
+API_ENDPOINT = '<YOUR API ENDPOINT>'
 headers = {'content-type': 'application/json'}
 
 
@@ -33,6 +33,10 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
     all_results = []
     dataframe1.replace({"NULL":"NaN"}, inplace=True)
 
+    for c in dataframe1.columns:
+        if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dataframe1[c]):
+            dataframe1[c] = dataframe1[c].map(lambda t: "-".join([str(t.year), str(t.month), str(t.day)]))
+    
     while start_idx < df_len:
             
         try:
@@ -43,7 +47,11 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
             
             t = requests.post(API_ENDPOINT, headers=headers, data = data_pt)
             
-            all_results.extend(json.loads(t.json())['result'])
+            api_results = json.loads(t.json())
+            if 'result' in api_results:
+                all_results.extend(api_results['result'])
+            elif 'forecast' in api_results:
+                all_results.extend(api_results['forecast'])
         except Exception as e:
             print ("----------- EXCEPTION ------------", e, start_idx, end_idx, data_pt)
             raise e
@@ -54,9 +62,8 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
 
     df = pd.DataFrame({"predictions": all_results})
     
-    dataframe1["predictions"] = df["predictions"].astype(str)
+    dataframe1["predictions"] = df["predictions"]
     
-    # dataframe1["predictions"] = df["predictions"]
 
     # If a zip file is connected to the third input port,
     # it is unzipped under "./Script Bundle". This directory is added
