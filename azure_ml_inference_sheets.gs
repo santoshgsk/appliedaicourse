@@ -6,20 +6,24 @@ function getPredictions(endpoint, formData) {
     'contentType': 'application/json',
     'payload' : JSON.stringify(formData)
   };
-  
-  Logger.log(formData);
-  
+    
   var res = UrlFetchApp.fetch(endpoint, options);
   
   var predictions = JSON.parse(JSON.parse(res.getContentText()));
   
-  Logger.log(predictions.result[0]);
+  if ( 'result' in predictions)
+  {
+    return predictions.result;
+  } 
+  if ( 'forecast' in predictions)
+  {
+    return predictions.forecast;
+  }
   
-  return predictions.result;
   
 }
 
-function getData(endpoint) {
+function getData(endpoint, data_types) {
   
   var sheet = SpreadsheetApp.getActiveSheet();  
   
@@ -27,45 +31,133 @@ function getData(endpoint) {
   
   var header = values.shift();
   
-  Logger.log(header);
-  
+  for(var i = 0; i<header.length; i++)
+  {
+    var types = data_types[header[i]];
+    if (types['type'] === 'string')
+    {
+      sheet.getRange(2, i+1, sheet.getLastRow(), 1).setNumberFormat("@");
+    }
+    if (types['type'] === 'integer')
+    {
+      
+      var range = sheet.getRange(2, i+1, sheet.getLastRow()-1, 1);
+      
+      range.setNumberFormat("0");
+      var data = range.getValues();
+      range.setValues(
+        data.map( function(row)
+           {
+             return row.map( function(cell) {
+               return cell === "" ? "NaN" : cell;
+             }
+             );
+           }
+        )
+      );
+    }
+    if (types['type'] === 'number')
+    {
+      var range = sheet.getRange(2, i+1, sheet.getLastRow()-1, 1);
+      
+      range.setNumberFormat("0.000000000");
+      var data = range.getValues();
+      range.setValues(
+        data.map( function(row)
+           {
+             return row.map( function(cell) {
+               return cell === "" ? "NaN" : cell;
+             }
+             );
+           }
+        )
+      );
+      
+    }
+  }
+    
   var lastrow = sheet.getLastRow();
   
   var lastcolumn = sheet.getLastColumn();
   
-  var predictions = [['predictions']];
+  var predictions = [];
   
+  var dataArray = [];
+  
+  var values = sheet.getRange(2, 1, sheet.getLastRow()-1, sheet.getLastColumn()).getValues();
+  
+//  sheet.getRange(1, lastcolumn+1, 1, 1).setValues([['predictions']]);
+  
+//  var preds_so_far = 1
+
   values.forEach(function(row) {
     
-    formData = {}
+    formData = {};
+    
     for(var i = 0; i < header.length; i++)
-    {
+    {      
       formData[header[i]] = row[i];
     }
    
-    formDict = {"data": [formData]};
-        
-    predictions.push(getPredictions(endpoint, formDict));
+    dataArray.push(formData);
     
+    if (dataArray.length >= 1000 ){
+      
+      formDict = {"data" : dataArray};
+      predictions = predictions.concat(getPredictions(endpoint, formDict));
+      
+      
+      dataArray = [];
+    }
   })
   
-  sheet.getRange(1, lastcolumn+1, lastrow, 1).setValues(predictions);
+  Logger.log(dataArray);
+  if (dataArray.length > 0) {
+    formDict = {"data" : dataArray};
+    predictions = predictions.concat(getPredictions(endpoint, formDict));
+  }
+  
+  log_preds = [['predictions']]
+  predictions.forEach(function(pred) {
+  
+    log_preds.push([pred]);
+  }
+  )
+  
+  Logger.log(log_preds);
+  sheet.getRange(1, lastcolumn+1, lastrow, 1).setValues(log_preds);
     
+}
+
+function getDataTypes(endpoint) {
+  
+  var swagger = endpoint.replace("score", "swagger.json");
+  
+  var res = UrlFetchApp.fetch(swagger);
+  
+  var swagger_res = JSON.parse(res);
+  
+  var data_types = swagger_res['definitions']['ServiceInput']['properties']['data']['items']['properties'];
+
+  return data_types;
+  
 }
 
 function showPopup() {
   
   var ui = SpreadsheetApp.getUi();
   
-  var prompt = ui.prompt("Azure AutoML Endpoint", "Enter the endpoint url of the AutoML model", ui.ButtonSet.OK);
+  var prompt = ui.prompt("Azure AutoML Endpoint", "Check this blog for instructions https://santoshgsk.com/azure-automl-inference-addon/", ui.ButtonSet.OK);
   
   var endpoint = prompt.getResponseText();
   
-  Logger.log(endpoint.length);
+  var data_types = getDataTypes(endpoint);
+  
+//  Logger.log(endpoint.length);
   
   if (endpoint.length > 0)
   {
-    getData(endpoint)
+    getData(endpoint, data_types)
   }
 }
 
@@ -75,6 +167,5 @@ function onOpen() {
   ui.createMenu('Azure AutoML')
       .addItem('Get Predictions', 'showPopup')
       .addToUi();
-  
   
 }
